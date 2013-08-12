@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+  <script src="js/AudioContextMonkeyPatch.js"></script>
+  <script src="js/AudioParam-latest.js"></script>
+  <style>
+    canvas {
+      background-color: black;
+      display: block;
+      margin-bottom: 1em;
+    }
+    #customContainer, #nativeContainer {
+      display: inline-block;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="canvasContainer">
+  </div>
+  <script>
+    var TIME = 20
+      , CANW = 500
+      , CANH = 500
+      , BLOCK = 256
+      , MAXY = 20
+      , MINY = -20
+      , audioCtx = new AudioContext
+
+    var plotFull = function() { return audioCtx.currentTime > TIME }
+
+    // --------------- AudioParam test case --------------- //
+    var testCase = function(title, cb) {
+      var local = {}      // We need this to prevent garbage collection
+        , data = []
+
+      // Node that will collect output from the AudioParam
+      local.scopeNode = audioCtx.createScriptProcessor(BLOCK, 1, 1)
+      local.muteNode = audioCtx.createGain()
+      local.muteNode.gain.value = 0
+      local.muteNode.connect(audioCtx.destination)
+      local.scopeNode.connect(local.muteNode)
+      local.scopeNode.onaudioprocess = function(event) {
+        if (!plotFull()) this.data.push(event.inputBuffer.getChannelData(0)[0])
+      }
+      local.scopeNode.data = data
+
+      // Creating the AudioParam
+      local.audioParam = new AudioParam(audioCtx, 10)
+      local.audioParam.connect(local.scopeNode)
+
+      // Canvas rendering
+      local.renderer = new Renderer(title, data)
+
+      cb(local.audioParam)
+      return local
+    }
+
+    // --------------- Canvas rendering --------------- //
+    var Renderer = function(testTitle, data) {
+      var self = this
+        , canvas = document.createElement('canvas')
+        , canvasCtx = canvas.getContext('2d')
+      document.getElementById('canvasContainer').insertBefore(canvas)
+      canvas.setAttribute('height', CANH)
+      canvas.setAttribute('width', CANW)
+      canvasCtx.strokeStyle = 'white'
+      canvasCtx.fillStyle = 'white'
+
+      this.testTitle = testTitle
+      this.canvasCtx = canvasCtx
+      this.data = data
+      setTimeout(function() { self.render() }, 200)
+    }
+
+    Renderer.prototype.coords = function(i, val) {
+      if (isNaN(val)) val = 0
+      return [i / (TIME * audioCtx.sampleRate / BLOCK) * CANW, CANH - ((val - MINY) * CANH / (MAXY - MINY))]
+    }
+
+    Renderer.prototype.render = function() {
+      var self = this
+      this.canvasCtx.clearRect(0, 0, CANW, CANH)
+      this.canvasCtx.fillText(this.testTitle, 0, 20)
+      this.canvasCtx.beginPath()
+      this.canvasCtx.moveTo(this.coords(0, this.data[0]))
+      this.data.slice(1).forEach(function(val, i) {
+        self.canvasCtx.lineTo.apply(self.canvasCtx, self.coords(i + 1, val))
+      })
+      this.canvasCtx.stroke()
+      if (!plotFull()) setTimeout(function() { self.render() }, 200)
+    }
+
+    // --------------- Test cases --------------- //
+    var t1 = testCase('SetValue, then ExponentialRampToValue',
+      function(audioParam) {
+        audioParam.value = 0.0001
+        audioParam.setValueAtTime(5, 2)
+        audioParam.exponentialRampToValueAtTime(18, 10)
+        audioParam.linearRampToValueAtTime(-18, 15)
+      }
+    )
+
+  </script>
+</body>
+
+</html> 
+
