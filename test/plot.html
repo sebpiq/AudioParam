@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+  <script src="js/AudioContextMonkeyPatch.js"></script>
+  <script src="js/AudioParam-latest.js"></script>
+  <script src="js/Renderer.js"></script>
+  <style>
+    canvas {
+      background-color: black;
+      display: block;
+      margin-bottom: 1em;
+    }
+    #customContainer, #nativeContainer {
+      display: inline-block;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="canvasContainer">
+  </div>
+  <script>
+    var audioCtx = new AudioContext
+
+    var moreData = function() { return audioCtx.currentTime < TIME }
+
+    // --------------- AudioParam test case --------------- //
+    var testCase = function(title, cb) {
+      var local = {}      // We need this to prevent garbage collection
+        , data = []
+
+      // Node that will collect output from the AudioParam
+      local.scopeNode = audioCtx.createScriptProcessor(BLOCK, 1, 1)
+      local.muteNode = audioCtx.createGain()
+      local.muteNode.gain.value = 0
+      local.muteNode.connect(audioCtx.destination)
+      local.scopeNode.connect(local.muteNode)
+      local.scopeNode.onaudioprocess = function(event) {
+        if (moreData()) this.data.push(event.inputBuffer.getChannelData(0)[0])
+      }
+      local.scopeNode.data = data
+
+      // Creating the AudioParam
+      local.audioParam = new AudioParam(audioCtx, 10)
+      local.audioParam.connect(local.scopeNode)
+
+      // Canvas rendering
+      local.renderer = new Renderer(title, data, moreData, audioCtx.sampleRate)
+
+      cb(local.audioParam)
+      return local
+    }
+
+    // --------------- Test cases --------------- //
+    var t1 = testCase('SetValue, then ExponentialRampToValue',
+      function(audioParam) {
+        audioParam.value = 0.0001
+        audioParam.setValueAtTime(5, 2)
+        audioParam.exponentialRampToValueAtTime(18, 10)
+        audioParam.linearRampToValueAtTime(-18, 15)
+      }
+    )
+
+  </script>
+</body>
+
+</html> 
+

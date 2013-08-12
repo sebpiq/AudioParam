@@ -16,10 +16,9 @@ var AudioParam = module.exports = window.AudioParam = function(context, defaultV
   // The AudioParam
   audioParam = gainNode.gain
   audioParam.value = defaultValue
-  audioParam.connect = (function(gainNode, scriptNode) {
-    return function(destination, input) {
-      gainNode.connect(destination, 0, input)
-    }
-  })(gainNode, scriptNode)
+  audioParam.connect = function(destination, input) {
+    gainNode.connect(destination, 0, input)
+  }
+  audioParam._nodes = [scriptNode, gainNode]
   return audioParam
 }

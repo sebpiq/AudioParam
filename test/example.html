@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+  <script src="js/AudioContextMonkeyPatch.js"></script>
+  <script src="js/AudioParam-latest.js"></script>
+  <script src="js/Renderer.js"></script>
+  <style>
+    canvas {
+      background-color: black;
+      display: block;
+      margin-bottom: 1em;
+    }
+    #customContainer, #nativeContainer {
+      display: inline-block;
+    }
+  </style>
+</head>
+
+<body>
+  <div>
+  This example shows how to use two AudioParam to implement a custom process. 
+  </div>
+  <div id="canvasContainer">
+  </div>
+  <script>
+    var audioContext = new AudioContext
+
+    // This is just for plotting
+    var TIME = 10
+      , moreData = function() { return audioContext.currentTime < TIME }
+      , param1Data = [], param2Data = [], audioInData = []
+      , audioInRenderer = new Renderer('Audio input', audioInData, moreData, audioContext.sampleRate)
+      , param1Renderer = new Renderer('Param 1', param1Data, moreData, audioContext.sampleRate)
+      , param2Renderer = new Renderer('Param 2', param2Data, moreData, audioContext.sampleRate)
+
+
+    // Creating the AudioParams and nodes we will need
+    var param1 = new AudioParam(audioContext, 0.5)
+      , param2 = new AudioParam(audioContext, 0.8)
+      , audioIn = audioContext.createOscillator()
+      , customProcess = audioContext.createScriptProcessor(256, 3, 1)
+      , channelMerger = audioContext.createChannelMerger(3)
+
+    // We use a channel merger to get our 3 inputs in the customProcess
+    audioIn.connect(channelMerger, 0)
+    param1.connect(channelMerger, 1)
+    param2.connect(channelMerger, 2)
+    channelMerger.connect(customProcess)
+
+    customProcess.onaudioprocess = function(event) {
+      // YOUR CUSTOM PROCESS HERE
+      if(moreData()) {
+        audioInData.push(event.inputBuffer.getChannelData(0)[0])
+        param1Data.push(event.inputBuffer.getChannelData(1)[0])
+        param2Data.push(event.inputBuffer.getChannelData(2)[0])
+      }
+    }
+
+    // Attach your AudioParams to your custom node
+    customProcess.param1 = param1
+    customProcess.param2 = param2
+    customProcess.connect(audioContext.destination)
+
+    // Automation
+    audioIn.start(0)
+    audioIn.frequency.value = 5
+
+    customProcess.param1.value = 0.0001
+    customProcess.param1.setValueAtTime(10, 2)
+    customProcess.param1.exponentialRampToValueAtTime(0.0001, 5)
+    customProcess.param1.setValueAtTime(10, 5.1)
+    customProcess.param1.exponentialRampToValueAtTime(0.0001, 8)
+
+    customProcess.param2.value = 15
+    customProcess.param2.setValueAtTime(15, 2)
+    customProcess.param2.linearRampToValueAtTime(-10, 10)
+
+  </script>
+</body>
+
+</html> 
+
