@@ -3,8 +3,8 @@ AudioParam
 
 With the current [Web Audio API](https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html#AudioParam) version, you cannot instantiate `AudioParam`.
 
-This library implements a simple hack that allows you to instantiate a real `AudioParam`.
-You can then use this instantiated `AudioParam` to build custom audio nodes with `ScriptProcessorNode`.
+This library implements a simple hack that allows you to instantiate a real `AudioParam`
+which you can then use to build custom audio nodes with `ScriptProcessorNode`.
 
 Usage
 =======
