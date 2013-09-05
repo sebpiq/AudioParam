@@ -34,7 +34,7 @@ Renderer.prototype.render = function() {
   this.canvasCtx.clearRect(0, 0, CANW, CANH)
   this.canvasCtx.fillText(this.testTitle, 0, 20)
   this.canvasCtx.beginPath()
-  this.canvasCtx.moveTo(this.coords(0, this.data[0]))
+  this.canvasCtx.moveTo.apply(this.canvasCtx, this.coords(0, this.data[0]))
   this.data.slice(1).forEach(function(val, i) {
     self.canvasCtx.lineTo.apply(self.canvasCtx, self.coords(i + 1, val))
   })
